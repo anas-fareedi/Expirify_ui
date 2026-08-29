@@ -26,8 +26,14 @@ Add these in **Settings → Environment Variables** for Production *and* Preview
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_SUPABASE_PROJECT_ID`
 
-These are publishable client keys — safe to expose in the browser. Never add the
-service-role key.
+**Important:** Because these variables start with the `VITE_` public framework
+prefix, Vercel requires their **Visibility** to be set to **`Config`** (not
+`Secret`). If you set them to `Secret`, Vercel will reject them with the error:
+“Environment variables with a public framework prefix cannot use
+`visibility: secret`. Use `visibility: config` instead.”
+
+These are publishable client keys — safe to expose in the browser and in the
+build. Never add the service-role key.
 
 ## 4. Update auth URLs
 
