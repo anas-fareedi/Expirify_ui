@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { CalendarClock, Save, ScanLine } from "lucide-react";
+import { timelineLabel } from "@/lib/expiry";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useItems } from "@/hooks/use-items";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 
 export const Route = createFileRoute("/_authenticated/scan")({
   head: () => ({
@@ -39,11 +40,9 @@ function ScanPage() {
   const [form, setForm] = useState({
     name: "",
     barcode: "",
-    batch: "",
     category: "",
     purchaseDate: today(),
     expiryDate: "",
-    notes: "",
   });
 
   const onDetected = useCallback((value: string) => {
@@ -65,32 +64,53 @@ function ScanPage() {
     navigate({ to: "/dashboard" });
   };
 
+  const preview = form.expiryDate ? timelineLabel(form.expiryDate) : null;
+
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold sm:text-3xl">Scan a product</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Scan the barcode, QR code or printed expiry label — then confirm the details.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
+            <ScanLine className="h-3.5 w-3.5" /> Step 1 · Scan &nbsp;·&nbsp; Step 2 · Confirm
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Scan a product</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Point your camera at the barcode, QR code or printed expiry label.
+          </p>
+        </div>
+        {preview && (
+          <span className="rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-sm">
+            <CalendarClock className="mr-2 inline h-4 w-4 text-primary" />
+            {preview}
+          </span>
+        )}
+      </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="surface-card p-5">
+        <section className="surface-card glow-ring p-5">
           <BarcodeScanner onDetected={onDetected} />
         </section>
 
-        <form onSubmit={submit} className="surface-card space-y-4 p-5">
+        <form onSubmit={submit} className="surface-card space-y-5 p-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Product name</Label>
-            <Input id="name" value={form.name} onChange={set("name")} placeholder="Whey Protein Chocolate" />
+            <Label htmlFor="name">
+              Product name <span className="text-primary">*</span>
+            </Label>
+            <Input
+              id="name"
+              value={form.name}
+              onChange={set("name")}
+              placeholder="Whey Protein Chocolate"
+            />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="barcode">Barcode / QR value</Label>
-              <Input id="barcode" value={form.barcode} onChange={set("barcode")} placeholder="8901234567890" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="batch">Batch / lot</Label>
-              <Input id="batch" value={form.batch} onChange={set("batch")} placeholder="LOT-2291" />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="barcode">Barcode / QR value</Label>
+            <Input
+              id="barcode"
+              value={form.barcode}
+              onChange={set("barcode")}
+              placeholder="8901234567890"
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -98,19 +118,34 @@ function ScanPage() {
               <Input id="purchaseDate" type="date" value={form.purchaseDate} onChange={set("purchaseDate")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expiryDate">Expiry date</Label>
+              <Label htmlFor="expiryDate">
+                Expiry date <span className="text-primary">*</span>
+              </Label>
               <Input id="expiryDate" type="date" value={form.expiryDate} onChange={set("expiryDate")} />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Input id="category" value={form.category} onChange={set("category")} placeholder="Grocery, Dairy, Personal care" />
+            <Input
+              id="category"
+              value={form.category}
+              onChange={set("category")}
+              placeholder="Grocery, Dairy, Personal care"
+            />
+            <div className="flex flex-wrap gap-2 pt-1">
+              {["Grocery", "Dairy", "Bakery", "Personal care", "Medicine"].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, category: c }))}
+                  className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={form.notes} onChange={set("notes")} placeholder="Aisle 4, shelf B" rows={3} />
-          </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" size="lg" className="w-full">
             <Save className="mr-2 h-4 w-4" /> Save to dashboard
           </Button>
         </form>

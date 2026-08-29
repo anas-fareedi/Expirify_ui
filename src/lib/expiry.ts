@@ -2,11 +2,11 @@ export type Product = {
   id: string;
   name: string;
   barcode?: string;
-  batch?: string;
+  
   purchaseDate: string; // yyyy-mm-dd
   expiryDate: string; // yyyy-mm-dd
   category?: string;
-  notes?: string;
+  
   createdAt: string;
 };
 
