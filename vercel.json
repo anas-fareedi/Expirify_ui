@@ -4,17 +4,8 @@
   "installCommand": "bun install",
   "framework": null,
   "env": {
-    "VITE_SUPABASE_URL": {
-      "value": "https://c--1c9f5f10-3eaa-428f-9736-b6ce25f6cab5-prod.lovable.cloud",
-      "type": "plain"
-    },
-    "VITE_SUPABASE_PUBLISHABLE_KEY": {
-      "value": "sb_publishable_8FVAzKTVGBr68dDe1EqXcA_4vw7Lxdv",
-      "type": "plain"
-    },
-    "VITE_SUPABASE_PROJECT_ID": {
-      "value": "gcrhtilhlbtnqriiipru",
-      "type": "plain"
-    }
+    "VITE_SUPABASE_URL": "https://c--1c9f5f10-3eaa-428f-9736-b6ce25f6cab5-prod.lovable.cloud",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_8FVAzKTVGBr68dDe1EqXcA_4vw7Lxdv",
+    "VITE_SUPABASE_PROJECT_ID": "gcrhtilhlbtnqriiipru"
   }
 }

@@ -19,21 +19,14 @@ Cloudflare target inside Lovable, so the Vercel build switches the preset via
 
 ## 3. Environment variables
 
-Add these in **Settings → Environment Variables** for Production *and* Preview
-(values are in your Lovable project `.env`; see `.env.example` for the names):
+The three required `VITE_*` variables are already set in `vercel.json` as plain
+strings (Vercel’s schema requires `env` values to be strings, not objects).
+They are publishable client keys, so it is safe to include them in the build
+config. Never add the service-role key.
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_PROJECT_ID`
-
-**Important:** Because these variables start with the `VITE_` public framework
-prefix, Vercel requires their **Visibility** to be set to **`Config`** (not
-`Secret`). If you set them to `Secret`, Vercel will reject them with the error:
-“Environment variables with a public framework prefix cannot use
-`visibility: secret`. Use `visibility: config` instead.”
-
-These are publishable client keys — safe to expose in the browser and in the
-build. Never add the service-role key.
+If you prefer to manage them manually in **Settings → Environment Variables**
+instead, set their **Visibility** to **`Config`** (not `Secret`) — Vercel rejects
+`VITE_` variables as secrets because they must be embedded in the browser build.
 
 ## 4. Update auth URLs
 
