@@ -48,21 +48,41 @@ const features = [
   },
 ];
 
+const ticker = [
+  "7 days left · Greek yoghurt",
+  "3 days left · Sourdough loaf",
+  "1 day left · Fresh basil",
+  "Expired · Almond milk",
+  "Fresh · Canned tomatoes",
+];
+
 function Landing() {
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* animated ambient graphics */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <span
+          className="aurora-blob animate-drift left-[-12%] top-[-10%] h-[42rem] w-[42rem]"
+          style={{ background: "var(--gradient-glow)" }}
+        />
+        <span
+          className="aurora-blob animate-float right-[-16%] top-[22%] h-[32rem] w-[32rem]"
+          style={{ background: "radial-gradient(circle, oklch(0.7 0.1 200 / 0.7), transparent 70%)" }}
+        />
+      </div>
+
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
-        <div className="flex items-center gap-2">
-          <span className="glow-ring grid h-9 w-9 place-items-center rounded-lg bg-primary/15">
+        <div className="animate-rise flex items-center gap-2">
+          <span className="glow-ring animate-pulse-ring grid h-9 w-9 place-items-center rounded-lg bg-primary/15">
             <ShieldCheck className="h-4 w-4 text-primary" />
           </span>
           <span className="font-display text-lg font-semibold">Expirify</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="animate-rise flex items-center gap-2" style={{ animationDelay: "80ms" }}>
           <Button asChild variant="ghost" size="sm">
             <Link to="/auth">Sign in</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="hover-scale">
             <Link to="/auth">Get started</Link>
           </Button>
         </div>
@@ -71,41 +91,74 @@ function Landing() {
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-2 lg:py-20">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
+            <span className="animate-rise inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
               <Smartphone className="h-3.5 w-3.5" /> Phone · Laptop · Tablet
             </span>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.05] sm:text-5xl lg:text-6xl">
-              Scan it. <span className="text-gradient">Track it.</span> Never waste it.
+            <h1
+              className="animate-rise mt-5 text-4xl font-semibold leading-[1.05] sm:text-5xl lg:text-6xl"
+              style={{ animationDelay: "120ms" }}
+            >
+              Scan it. <span className="shimmer-text">Track it.</span> Never waste it.
             </h1>
-            <p className="mt-5 max-w-xl text-base text-muted-foreground">
+            <p
+              className="animate-rise mt-5 max-w-xl text-base text-muted-foreground"
+              style={{ animationDelay: "220ms" }}
+            >
               Expirify captures product name, purchase date and expiry date straight from the label —
               then warns you at 7 days, 3 days and 1 day left, so nothing expires on your shelf.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
+            <div
+              className="animate-rise mt-8 flex flex-wrap gap-3"
+              style={{ animationDelay: "320ms" }}
+            >
+              <Button asChild size="lg" className="hover-scale">
                 <Link to="/auth">Create free account</Link>
               </Button>
-              <Button asChild size="lg" variant="secondary">
+              <Button asChild size="lg" variant="secondary" className="hover-scale">
                 <Link to="/auth">Sign in with mobile</Link>
               </Button>
             </div>
+
+            {/* live alert ticker */}
+            <div
+              className="animate-rise surface-card mt-10 overflow-hidden py-3"
+              style={{ animationDelay: "420ms" }}
+            >
+              <div className="animate-ticker flex w-max gap-8 whitespace-nowrap px-4 text-xs text-muted-foreground">
+                {[...ticker, ...ticker].map((t, i) => (
+                  <span key={i} className="inline-flex items-center gap-2">
+                    <Bell className="h-3.5 w-3.5 text-primary" />
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="scan-frame overflow-hidden">
+          <div
+            className="scan-frame animate-rise animate-float relative overflow-hidden"
+            style={{ animationDelay: "200ms" }}
+          >
             <img
               src={heroImage}
               alt="Hand scanning a grocery product barcode with a phone to capture its expiry date"
               className="h-full w-full object-cover"
               loading="eager"
+              decoding="async"
             />
+            <span aria-hidden className="scan-line top-0" />
           </div>
         </section>
 
         <section className="mx-auto max-w-6xl px-4 pb-20">
-          <h2 className="text-2xl font-semibold sm:text-3xl">Everything on one shelf</h2>
+          <h2 className="animate-rise text-2xl font-semibold sm:text-3xl">Everything on one shelf</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((f) => (
-              <article key={f.title} className="surface-card p-5">
+            {features.map((f, i) => (
+              <article
+                key={f.title}
+                className="surface-card lift-card animate-rise p-5"
+                style={{ animationDelay: `${100 + i * 90}ms` }}
+              >
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/15">
                   <f.icon className="h-5 w-5 text-primary" />
                 </span>
