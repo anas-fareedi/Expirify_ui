@@ -68,16 +68,37 @@ export function BarcodeScanner({ onDetected }: Props) {
     <div className="space-y-3">
       <div className="scan-frame relative aspect-[4/3] overflow-hidden bg-secondary/60">
         <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+
         {!active && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
-            <ScanLine className="h-10 w-10 text-primary" />
-            <p className="max-w-xs text-sm text-muted-foreground">
+            <span className="animate-radar absolute inset-0 opacity-60" aria-hidden />
+            <span className="animate-pulse-ring grid h-14 w-14 place-items-center rounded-full bg-primary/15">
+              <ScanLine className="h-7 w-7 text-primary" />
+            </span>
+            <p className="relative max-w-xs text-sm text-muted-foreground">
               Point the camera at a barcode, QR code or printed expiry label.
             </p>
           </div>
         )}
+
         {active && (
-          <div className="pointer-events-none absolute inset-6 rounded-xl border-2 border-primary/70 animate-pulse" />
+          <>
+            <span className="scan-line top-6" aria-hidden />
+            <div className="pointer-events-none absolute inset-6" aria-hidden>
+              {[
+                "left-0 top-0 border-l-2 border-t-2 rounded-tl-lg",
+                "right-0 top-0 border-r-2 border-t-2 rounded-tr-lg",
+                "left-0 bottom-0 border-l-2 border-b-2 rounded-bl-lg",
+                "right-0 bottom-0 border-r-2 border-b-2 rounded-br-lg",
+              ].map((pos, i) => (
+                <span
+                  key={pos}
+                  className={`animate-bracket absolute h-8 w-8 border-primary ${pos}`}
+                  style={{ animationDelay: `${i * 180}ms` }}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
