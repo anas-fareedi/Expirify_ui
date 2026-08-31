@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { CountUp, MotionCard, Reveal } from "@/components/motion";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -195,18 +196,24 @@ function StatCard({
   }[tone];
 
   return (
-    <div
-      className="surface-card lift-card animate-rise flex items-center gap-4 p-5"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <span className={cn("grid h-10 w-10 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110", toneClass)}>
-        <Icon className="h-5 w-5" />
-      </span>
-      <div>
-        <p className="text-2xl font-semibold">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
+    <Reveal delay={delay}>
+      <MotionCard className="surface-card group flex items-center gap-4 p-5">
+        <span
+          className={cn(
+            "grid h-10 w-10 place-items-center rounded-lg transition-transform duration-500 group-hover:rotate-[8deg] group-hover:scale-110",
+            toneClass,
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-2xl font-semibold">
+            <CountUp value={value} />
+          </p>
+          <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+      </MotionCard>
+    </Reveal>
   );
 }
 
@@ -228,29 +235,47 @@ function ItemRow({
   );
   const left = Math.max(0, daysLeft(item.expiryDate));
   const pct = Math.min(100, Math.round((left / total) * 100));
+  const urgent = status === "critical" || status === "expired";
 
   return (
-    <article
-      className="surface-card lift-card animate-rise flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="truncate text-base font-semibold">{item.name}</h3>
-          <span className={cn("rounded-full border px-2.5 py-0.5 text-xs", statusStyles[status])}>
-            {timelineLabel(item.expiryDate)}
-          </span>
+    <Reveal delay={delay} as="article">
+      <MotionCard
+        strength={0.4}
+        className={cn(
+          "surface-card flex flex-col gap-4 p-5 sm:flex-row sm:items-center",
+          urgent && "flow-border",
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-base font-semibold">{item.name}</h3>
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-0.5 text-xs transition-transform duration-300",
+                statusStyles[status],
+                urgent && "animate-pulse-ring",
+              )}
+            >
+              {timelineLabel(item.expiryDate)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Purchased {item.purchaseDate} · Expires {item.expiryDate}
+            {item.barcode ? ` · Code ${item.barcode}` : ""}
+            {item.category ? ` · ${item.category}` : ""}
+          </p>
+          <Progress value={pct} className="mt-3 h-1.5 transition-all duration-700" />
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Purchased {item.purchaseDate} · Expires {item.expiryDate}
-          {item.barcode ? ` · Code ${item.barcode}` : ""}
-          {item.category ? ` · ${item.category}` : ""}
-        </p>
-        <Progress value={pct} className="mt-3 h-1.5" />
-      </div>
-      <Button variant="ghost" size="icon" onClick={onRemove} aria-label={`Remove ${item.name}`}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </article>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="transition-transform duration-300 hover:scale-110 hover:text-destructive"
+          onClick={onRemove}
+          aria-label={`Remove ${item.name}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </MotionCard>
+    </Reveal>
   );
 }

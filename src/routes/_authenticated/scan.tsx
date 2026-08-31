@@ -9,6 +9,7 @@ import { useItems } from "@/hooks/use-items";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MotionCard, Reveal } from "@/components/motion";
 
 
 export const Route = createFileRoute("/_authenticated/scan")({
@@ -68,10 +69,10 @@ function ScanPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="animate-rise flex flex-wrap items-end justify-between gap-3">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
-            <ScanLine className="h-3.5 w-3.5" /> Step 1 · Scan &nbsp;·&nbsp; Step 2 · Confirm
+            <ScanLine className="h-3.5 w-3.5 animate-pulse" /> Step 1 · Scan &nbsp;·&nbsp; Step 2 · Confirm
           </span>
           <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Scan a product</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -79,7 +80,7 @@ function ScanPage() {
           </p>
         </div>
         {preview && (
-          <span className="rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-sm">
+          <span key={preview} className="animate-count rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-sm">
             <CalendarClock className="mr-2 inline h-4 w-4 text-primary" />
             {preview}
           </span>
@@ -87,11 +88,14 @@ function ScanPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="surface-card glow-ring p-5">
-          <BarcodeScanner onDetected={onDetected} />
-        </section>
+        <Reveal>
+          <MotionCard strength={0.5} className="surface-card glow-ring flow-border p-5">
+            <BarcodeScanner onDetected={onDetected} />
+          </MotionCard>
+        </Reveal>
 
-        <form onSubmit={submit} className="surface-card space-y-5 p-6">
+        <Reveal delay={120}>
+        <form onSubmit={submit} className="surface-card spotlight space-y-5 p-6">
           <div className="space-y-2">
             <Label htmlFor="name">
               Product name <span className="text-primary">*</span>
@@ -145,10 +149,11 @@ function ScanPage() {
               ))}
             </div>
           </div>
-          <Button type="submit" size="lg" className="w-full">
+          <Button type="submit" size="lg" className="hover-scale w-full">
             <Save className="mr-2 h-4 w-4" /> Save to dashboard
           </Button>
         </form>
+        </Reveal>
       </div>
     </AppShell>
   );

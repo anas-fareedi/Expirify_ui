@@ -277,3 +277,143 @@
 .hover-scale:hover {
   transform: scale(1.05);
 }
+
+/* ── Advanced motion layer ─────────────────────────────────────── */
+@keyframes radar-sweep {
+  to { transform: rotate(360deg); }
+}
+@keyframes border-flow {
+  to { --angle: 360deg; }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.995); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.08); }
+}
+@keyframes bracket-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+@keyframes count-pop {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@utility page-in {
+  animation: page-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity, filter;
+}
+
+@utility animate-radar {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    oklch(0.83 0.223 143 / 0.32) 40deg,
+    transparent 90deg
+  );
+  animation: radar-sweep 3s linear infinite;
+  will-change: transform;
+}
+
+@utility animate-breathe {
+  animation: glow-breathe 4.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@utility animate-bracket {
+  animation: bracket-pulse 2s ease-in-out infinite;
+}
+
+@utility animate-count {
+  animation: count-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility flow-border {
+  position: relative;
+  isolation: isolate;
+}
+
+.flow-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0%,
+    var(--primary) 18%,
+    oklch(0.78 0.14 168) 32%,
+    transparent 55%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-flow 5s linear infinite;
+  opacity: 0.7;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Reveal on scroll */
+@utility reveal {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0) scale(0.985);
+  transition:
+    opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Pointer-reactive tilt + spotlight */
+@utility tilt-3d {
+  transform: perspective(900px) rotateX(calc(var(--ty, 0) * -6deg))
+    rotateY(calc(var(--tx, 0) * 6deg)) translate3d(0, 0, 0);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-style: preserve-3d;
+}
+
+@utility spotlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    oklch(0.83 0.223 143 / 0.16),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.spotlight:hover::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+  .tilt-3d { transform: none; }
+}
