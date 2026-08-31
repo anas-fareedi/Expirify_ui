@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { CountUp, MotionCard, Reveal } from "@/components/motion";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
