@@ -62,21 +62,21 @@ function Dashboard() {
     return c;
   }, [items]);
 
-  const visible = sorted.filter((item) => {
-    const d = daysLeft(item.expiryDate);
-    const matchesQuery = item.name.toLowerCase().includes(query.trim().toLowerCase());
-    if (!matchesQuery) return false;
-    if (filter === "all") return true;
-    if (filter === "expired") return d < 0;
-    if (filter === "critical") return d >= 0 && d <= 1;
-    if (filter === "soon") return d >= 0 && d <= 3;
-    return d >= 0 && d <= 7;
-  });
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return sorted.filter((item) => {
+      const d = daysLeft(item.expiryDate);
+      if (q && !item.name.toLowerCase().includes(q)) return false;
+      if (filter === "all") return true;
+      if (filter === "expired") return d < 0;
+      if (filter === "critical") return d >= 0 && d <= 1;
+      if (filter === "soon") return d >= 0 && d <= 3;
+      return d >= 0 && d <= 7;
+    });
+  }, [sorted, query, filter]);
 
-  const alerts = sorted.filter((i) => {
-    const d = daysLeft(i.expiryDate);
-    return d <= 7;
-  });
+  const alerts = useMemo(() => sorted.filter((i) => daysLeft(i.expiryDate) <= 7), [sorted]);
+
 
   return (
     <AppShell>
