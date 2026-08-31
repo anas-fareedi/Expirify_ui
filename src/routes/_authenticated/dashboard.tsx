@@ -62,25 +62,25 @@ function Dashboard() {
     return c;
   }, [items]);
 
-  const visible = sorted.filter((item) => {
-    const d = daysLeft(item.expiryDate);
-    const matchesQuery = item.name.toLowerCase().includes(query.trim().toLowerCase());
-    if (!matchesQuery) return false;
-    if (filter === "all") return true;
-    if (filter === "expired") return d < 0;
-    if (filter === "critical") return d >= 0 && d <= 1;
-    if (filter === "soon") return d >= 0 && d <= 3;
-    return d >= 0 && d <= 7;
-  });
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return sorted.filter((item) => {
+      const d = daysLeft(item.expiryDate);
+      if (q && !item.name.toLowerCase().includes(q)) return false;
+      if (filter === "all") return true;
+      if (filter === "expired") return d < 0;
+      if (filter === "critical") return d >= 0 && d <= 1;
+      if (filter === "soon") return d >= 0 && d <= 3;
+      return d >= 0 && d <= 7;
+    });
+  }, [sorted, query, filter]);
 
-  const alerts = sorted.filter((i) => {
-    const d = daysLeft(i.expiryDate);
-    return d <= 7;
-  });
+  const alerts = useMemo(() => sorted.filter((i) => daysLeft(i.expiryDate) <= 7), [sorted]);
+
 
   return (
     <AppShell>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="animate-rise mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold sm:text-3xl">Expiry dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -95,14 +95,14 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Expired" value={counts.expired} tone="destructive" icon={AlertTriangle} />
-        <StatCard label="1 day left" value={counts.critical} tone="destructive" icon={Clock} />
-        <StatCard label="3 days left" value={counts.soon} tone="warning" icon={Bell} />
-        <StatCard label="Safe" value={counts.fresh} tone="success" icon={CheckCircle2} />
+        <StatCard label="Expired" value={counts.expired} tone="destructive" icon={AlertTriangle} delay={0} />
+        <StatCard label="1 day left" value={counts.critical} tone="destructive" icon={Clock} delay={90} />
+        <StatCard label="3 days left" value={counts.soon} tone="warning" icon={Bell} delay={180} />
+        <StatCard label="Safe" value={counts.fresh} tone="success" icon={CheckCircle2} delay={270} />
       </div>
 
       {alerts.length > 0 && (
-        <section className="surface-card mt-6 p-5">
+        <section className="surface-card animate-rise mt-6 p-5" style={{ animationDelay: "340ms" }}>
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <Bell className="h-4 w-4 text-primary" /> Notifications
           </h2>
@@ -130,7 +130,7 @@ function Dashboard() {
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={cn(
-              "rounded-full border px-3.5 py-1.5 text-xs transition-colors",
+              "rounded-full border px-3.5 py-1.5 text-xs transition-all duration-300 hover:scale-105",
               filter === f.key
                 ? "border-primary/50 bg-primary/15 text-primary"
                 : "border-border text-muted-foreground hover:bg-secondary",
@@ -162,8 +162,13 @@ function Dashboard() {
           </div>
         )}
 
-        {visible.map((item) => (
-          <ItemRow key={item.id} item={item} onRemove={() => removeItem(item.id)} />
+        {visible.map((item, i) => (
+          <ItemRow
+            key={item.id}
+            item={item}
+            delay={Math.min(i, 8) * 60}
+            onRemove={() => removeItem(item.id)}
+          />
         ))}
       </div>
     </AppShell>
@@ -175,11 +180,13 @@ function StatCard({
   value,
   tone,
   icon: Icon,
+  delay = 0,
 }: {
   label: string;
   value: number;
   tone: "destructive" | "warning" | "success";
   icon: React.ComponentType<{ className?: string }>;
+  delay?: number;
 }) {
   const toneClass = {
     destructive: "text-destructive bg-destructive/15",
@@ -188,8 +195,11 @@ function StatCard({
   }[tone];
 
   return (
-    <div className="surface-card flex items-center gap-4 p-5">
-      <span className={cn("grid h-10 w-10 place-items-center rounded-lg", toneClass)}>
+    <div
+      className="surface-card lift-card animate-rise flex items-center gap-4 p-5"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <span className={cn("grid h-10 w-10 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110", toneClass)}>
         <Icon className="h-5 w-5" />
       </span>
       <div>
@@ -200,7 +210,15 @@ function StatCard({
   );
 }
 
-function ItemRow({ item, onRemove }: { item: Product; onRemove: () => void }) {
+function ItemRow({
+  item,
+  onRemove,
+  delay = 0,
+}: {
+  item: Product;
+  onRemove: () => void;
+  delay?: number;
+}) {
   const status = statusOf(item.expiryDate);
   const total = Math.max(
     1,
@@ -212,7 +230,10 @@ function ItemRow({ item, onRemove }: { item: Product; onRemove: () => void }) {
   const pct = Math.min(100, Math.round((left / total) * 100));
 
   return (
-    <article className="surface-card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+    <article
+      className="surface-card lift-card animate-rise flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="truncate text-base font-semibold">{item.name}</h3>
