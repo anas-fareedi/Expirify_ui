@@ -140,8 +140,11 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    // Missing Supabase env vars (e.g. not set on a self-hosted deploy) must not
-    // take down every page through the root error boundary.
+    setupOfflineApp();
+  }, []);
+
+  useEffect(() => {
+
     try {
       const { data } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
