@@ -105,7 +105,12 @@ function ScanPage() {
         )}
       </div>
 
+      <div className="mt-5">
+        <ListSwitcher lists={lists} activeList={activeList} onSelect={select} />
+      </div>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
+
         <Reveal>
           <MotionCard strength={0.5} className="surface-card glow-ring flow-border p-5">
             <BarcodeScanner onDetected={onDetected} />
