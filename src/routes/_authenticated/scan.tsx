@@ -6,6 +6,9 @@ import { timelineLabel } from "@/lib/expiry";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useItems } from "@/hooks/use-items";
+import { useActiveList } from "@/hooks/use-lists";
+import { ListSwitcher } from "@/components/ListSwitcher";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
