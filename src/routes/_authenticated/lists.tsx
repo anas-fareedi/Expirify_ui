@@ -64,7 +64,11 @@ function ListsPage() {
   };
 
   const join = async () => {
-    if (!code.trim()) return toast.error("Enter a join code");
+    if (!code.trim()) {
+      toast.error("Enter a join code");
+      return;
+    }
+
     try {
       const id = await joinList.mutateAsync(code);
       select(id);
