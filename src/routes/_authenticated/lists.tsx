@@ -48,7 +48,11 @@ function ListsPage() {
   const [openMembers, setOpenMembers] = useState<string | null>(null);
 
   const create = async () => {
-    if (!name.trim()) return toast.error("Give the list a name");
+    if (!name.trim()) {
+      toast.error("Give the list a name");
+      return;
+    }
+
     try {
       const list = await createList.mutateAsync(name.trim());
       select(list.id);
