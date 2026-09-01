@@ -2,8 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AlertTriangle, Bell, CheckCircle2, Clock, PackageSearch, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { useItems } from "@/hooks/use-items";
-import { daysLeft, statusOf, timelineLabel, type Product, type Status } from "@/lib/expiry";
+import { ListSwitcher } from "@/components/ListSwitcher";
+import { useItems, useLegacyMigration } from "@/hooks/use-items";
+import { useActiveList, useCreateList } from "@/hooks/use-lists";
+import {
+  daysLeft,
+  shelfLifePercent,
+  statusOf,
+  timelineLabel,
+  type Item,
+  type Status,
+} from "@/lib/expiry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -13,16 +22,16 @@ import { CountUp, MotionCard, Reveal } from "@/components/motion";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Expiry Dashboard — Expirify Inventory Timeline" },
+      { title: "Expiry Dashboard — Expirify Shared Inventory Timeline" },
       {
         name: "description",
         content:
-          "See every scanned product with 7, 3 and 1 day expiry alerts, purchase dates and shelf-life progress in one dashboard.",
+          "See every scanned product in your shared list with exact days left, purchase dates and shelf-life progress in one live dashboard.",
       },
       { property: "og:title", content: "Expiry Dashboard — Expirify" },
       {
         property: "og:description",
-        content: "Track scanned products and get alerted before anything expires.",
+        content: "Track shared products and get alerted before anything expires.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -48,25 +57,29 @@ const statusStyles: Record<Status, string> = {
 };
 
 function Dashboard() {
-  const { items, ready, removeItem } = useItems();
+  const { lists, activeList, select, isLoading: listsLoading } = useActiveList();
+  const createList = useCreateList();
+  const { items, ready, removeItem } = useItems(activeList?.id);
+  useLegacyMigration(activeList?.id);
+
   const [filter, setFilter] = useState<(typeof filters)[number]["key"]>("all");
   const [query, setQuery] = useState("");
 
   const sorted = useMemo(
-    () => [...items].sort((a, b) => daysLeft(a.expiryDate) - daysLeft(b.expiryDate)),
+    () => [...items].sort((a, b) => daysLeft(a.expiry_date) - daysLeft(b.expiry_date)),
     [items],
   );
 
   const counts = useMemo(() => {
     const c = { expired: 0, critical: 0, soon: 0, watch: 0, fresh: 0 } as Record<Status, number>;
-    items.forEach((i) => (c[statusOf(i.expiryDate)] += 1));
+    items.forEach((i) => (c[statusOf(i.expiry_date)] += 1));
     return c;
   }, [items]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return sorted.filter((item) => {
-      const d = daysLeft(item.expiryDate);
+      const d = daysLeft(item.expiry_date);
       if (q && !item.name.toLowerCase().includes(q)) return false;
       if (filter === "all") return true;
       if (filter === "expired") return d < 0;
@@ -76,16 +89,45 @@ function Dashboard() {
     });
   }, [sorted, query, filter]);
 
-  const alerts = useMemo(() => sorted.filter((i) => daysLeft(i.expiryDate) <= 7), [sorted]);
+  const alerts = useMemo(() => sorted.filter((i) => daysLeft(i.expiry_date) <= 7), [sorted]);
 
+  if (!listsLoading && lists.length === 0) {
+    return (
+      <AppShell>
+        <div className="surface-card animate-rise mx-auto mt-10 max-w-md space-y-4 p-8 text-center">
+          <PackageSearch className="mx-auto h-10 w-10 text-primary" />
+          <h1 className="text-xl font-semibold">Create your first list</h1>
+          <p className="text-sm text-muted-foreground">
+            Lists hold your scanned products. Share one with family or roommates so everyone gets
+            the same expiry alerts.
+          </p>
+          <Button
+            className="w-full"
+            disabled={createList.isPending}
+            onClick={async () => {
+              const list = await createList.mutateAsync("Home");
+              select(list.id);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Create “Home”
+          </Button>
+          <Button asChild variant="secondary" className="w-full">
+            <Link to="/lists">Join a list with a code</Link>
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
-      <div className="animate-rise mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="animate-rise mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold sm:text-3xl">Expiry dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {items.length} tracked item{items.length === 1 ? "" : "s"} · alerts at 7, 3 and 1 day
+            {activeList ? `${activeList.name} · ` : ""}
+            {items.length} tracked item{items.length === 1 ? "" : "s"} · exact days left, live for
+            every member
           </p>
         </div>
         <Button asChild>
@@ -95,10 +137,14 @@ function Dashboard() {
         </Button>
       </div>
 
+      <div className="mb-6">
+        <ListSwitcher lists={lists} activeList={activeList} onSelect={select} />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Expired" value={counts.expired} tone="destructive" icon={AlertTriangle} delay={0} />
         <StatCard label="1 day left" value={counts.critical} tone="destructive" icon={Clock} delay={90} />
-        <StatCard label="3 days left" value={counts.soon} tone="warning" icon={Bell} delay={180} />
+        <StatCard label="Within 3 days" value={counts.soon} tone="warning" icon={Bell} delay={180} />
         <StatCard label="Safe" value={counts.fresh} tone="success" icon={CheckCircle2} delay={270} />
       </div>
 
@@ -114,10 +160,10 @@ function Dashboard() {
                 <span
                   className={cn(
                     "shrink-0 rounded-full border px-2.5 py-1 text-xs",
-                    statusStyles[statusOf(item.expiryDate)],
+                    statusStyles[statusOf(item.expiry_date)],
                   )}
                 >
-                  {timelineLabel(item.expiryDate)}
+                  {timelineLabel(item.expiry_date)}
                 </span>
               </li>
             ))}
@@ -222,19 +268,12 @@ function ItemRow({
   onRemove,
   delay = 0,
 }: {
-  item: Product;
+  item: Item;
   onRemove: () => void;
   delay?: number;
 }) {
-  const status = statusOf(item.expiryDate);
-  const total = Math.max(
-    1,
-    Math.round(
-      (new Date(item.expiryDate).getTime() - new Date(item.purchaseDate).getTime()) / 86_400_000,
-    ),
-  );
-  const left = Math.max(0, daysLeft(item.expiryDate));
-  const pct = Math.min(100, Math.round((left / total) * 100));
+  const status = statusOf(item.expiry_date);
+  const pct = shelfLifePercent(item.purchase_date, item.expiry_date);
   const urgent = status === "critical" || status === "expired";
 
   return (
@@ -256,11 +295,11 @@ function ItemRow({
                 urgent && "animate-pulse-ring",
               )}
             >
-              {timelineLabel(item.expiryDate)}
+              {timelineLabel(item.expiry_date)}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Purchased {item.purchaseDate} · Expires {item.expiryDate}
+            Purchased {item.purchase_date} · Expires {item.expiry_date}
             {item.barcode ? ` · Code ${item.barcode}` : ""}
             {item.category ? ` · ${item.category}` : ""}
           </p>
