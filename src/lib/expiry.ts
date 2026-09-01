@@ -1,17 +1,31 @@
-export type Product = {
+export type Item = {
+  id: string;
+  list_id: string;
+  created_by: string;
+  name: string;
+  barcode: string | null;
+  category: string | null;
+  purchase_date: string; // yyyy-mm-dd (real date column)
+  expiry_date: string; // yyyy-mm-dd (real date column)
+  created_at: string;
+};
+
+/** Legacy shape used by the pre-database localStorage store (migrated once). */
+export type LegacyProduct = {
   id: string;
   name: string;
   barcode?: string;
-  
-  purchaseDate: string; // yyyy-mm-dd
-  expiryDate: string; // yyyy-mm-dd
+  purchaseDate: string;
+  expiryDate: string;
   category?: string;
-  
   createdAt: string;
 };
 
 export const STORAGE_KEY = "expirify.items.v1";
+export const MIGRATED_KEY = "expirify.migrated.v1";
+export const ACTIVE_LIST_KEY = "expirify.activeList.v1";
 
+/** Whole days between today (local midnight) and the expiry date. */
 export function daysLeft(expiryDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -30,33 +44,52 @@ export function statusOf(expiryDate: string): Status {
   return "fresh";
 }
 
-export const statusLabel: Record<Status, string> = {
-  expired: "Expired",
-  critical: "1 day left",
-  soon: "3 days left",
-  watch: "7 days left",
-  fresh: "Fresh",
-};
-
+/** Real, date-derived label — never a fixed bucket string. */
 export function timelineLabel(expiryDate: string): string {
   const d = daysLeft(expiryDate);
-  if (d < 0) return `Expired ${Math.abs(d)} day${Math.abs(d) === 1 ? "" : "s"} ago`;
+  if (d < 0) {
+    const n = Math.abs(d);
+    return `Expired ${n} day${n === 1 ? "" : "s"} ago`;
+  }
   if (d === 0) return "Expires today";
   if (d === 1) return "1 day left";
   return `${d} days left`;
 }
 
-export function loadItems(): Product[] {
+export function statusLabel(expiryDate: string): string {
+  return timelineLabel(expiryDate);
+}
+
+export function shelfLifePercent(purchaseDate: string, expiryDate: string): number {
+  const total = Math.max(
+    1,
+    Math.round(
+      (new Date(expiryDate + "T00:00:00").getTime() -
+        new Date(purchaseDate + "T00:00:00").getTime()) /
+        86_400_000,
+    ),
+  );
+  const left = Math.max(0, daysLeft(expiryDate));
+  return Math.min(100, Math.round((left / total) * 100));
+}
+
+export function loadLegacyItems(): LegacyProduct[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Product[]) : [];
+    return raw ? (JSON.parse(raw) as LegacyProduct[]) : [];
   } catch {
     return [];
   }
 }
 
-export function saveItems(items: Product[]) {
+export function clearLegacyItems() {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.localStorage.setItem(MIGRATED_KEY, "1");
+}
+
+export function legacyMigrationDone(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(MIGRATED_KEY) === "1";
 }

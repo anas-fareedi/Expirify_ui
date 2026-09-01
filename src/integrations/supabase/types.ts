@@ -14,16 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      items: {
+        Row: {
+          barcode: string | null
+          category: string | null
+          created_at: string
+          created_by: string
+          expiry_date: string
+          id: string
+          list_id: string
+          name: string
+          purchase_date: string
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category?: string | null
+          created_at?: string
+          created_by: string
+          expiry_date: string
+          id?: string
+          list_id: string
+          name: string
+          purchase_date?: string
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          expiry_date?: string
+          id?: string
+          list_id?: string
+          name?: string
+          purchase_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      list_members: {
+        Row: {
+          created_at: string
+          id: string
+          list_id: string
+          role: Database["public"]["Enums"]["list_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          list_id: string
+          role?: Database["public"]["Enums"]["list_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          list_id?: string
+          role?: Database["public"]["Enums"]["list_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_members_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lists: {
+        Row: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          join_code?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          join_code?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_list_member: {
+        Args: { _list_id: string; _user_id: string }
+        Returns: boolean
+      }
+      join_list_by_code: { Args: { _code: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      list_role: "owner" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +283,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      list_role: ["owner", "member"],
+    },
   },
 } as const

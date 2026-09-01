@@ -6,6 +6,9 @@ import { timelineLabel } from "@/lib/expiry";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useItems } from "@/hooks/use-items";
+import { useActiveList } from "@/hooks/use-lists";
+import { ListSwitcher } from "@/components/ListSwitcher";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +40,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function ScanPage() {
   const navigate = useNavigate();
-  const { addItem } = useItems();
+  const { lists, activeList, select } = useActiveList();
+  const { addItem } = useItems(activeList?.id);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
     barcode: "",
@@ -54,16 +59,29 @@ function ScanPage() {
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.expiryDate) {
       toast.error("Product name and expiry date are required");
       return;
     }
-    addItem(form);
-    toast.success(`${form.name} added to your dashboard`);
-    navigate({ to: "/dashboard" });
+    if (!activeList) {
+      toast.error("Create or join a list first");
+      navigate({ to: "/lists" });
+      return;
+    }
+    setSaving(true);
+    try {
+      await addItem(form);
+      toast.success(`${form.name} added to ${activeList.name}`);
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save the item");
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const preview = form.expiryDate ? timelineLabel(form.expiryDate) : null;
 
@@ -87,7 +105,12 @@ function ScanPage() {
         )}
       </div>
 
+      <div className="mt-5">
+        <ListSwitcher lists={lists} activeList={activeList} onSelect={select} />
+      </div>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
+
         <Reveal>
           <MotionCard strength={0.5} className="surface-card glow-ring flow-border p-5">
             <BarcodeScanner onDetected={onDetected} />
@@ -149,7 +172,7 @@ function ScanPage() {
               ))}
             </div>
           </div>
-          <Button type="submit" size="lg" className="hover-scale w-full">
+          <Button type="submit" size="lg" disabled={saving} className="hover-scale w-full">
             <Save className="mr-2 h-4 w-4" /> Save to dashboard
           </Button>
         </form>

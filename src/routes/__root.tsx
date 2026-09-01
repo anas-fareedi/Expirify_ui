@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { setupOfflineApp } from "@/lib/pwa";
+
 
 function NotFoundComponent() {
   return (
@@ -92,6 +94,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "theme-color", content: "#0d1512" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Expirify" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       {
@@ -104,9 +111,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
+
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -132,8 +142,11 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    // Missing Supabase env vars (e.g. not set on a self-hosted deploy) must not
-    // take down every page through the root error boundary.
+    setupOfflineApp();
+  }, []);
+
+  useEffect(() => {
+
     try {
       const { data } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
