@@ -167,7 +167,7 @@ function ScanPage() {
               ))}
             </div>
           </div>
-          <Button type="submit" size="lg" className="hover-scale w-full">
+          <Button type="submit" size="lg" disabled={saving} className="hover-scale w-full">
             <Save className="mr-2 h-4 w-4" /> Save to dashboard
           </Button>
         </form>
