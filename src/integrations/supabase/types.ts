@@ -14,42 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      item_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changes: Json
+          created_at: string
+          id: string
+          item_id: string
+          item_name: string | null
+          list_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          item_id: string
+          item_name?: string | null
+          list_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_name?: string | null
+          list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_events_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           barcode: string | null
           category: string | null
           created_at: string
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           expiry_date: string
           id: string
           list_id: string
           name: string
           purchase_date: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           barcode?: string | null
           category?: string | null
           created_at?: string
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           expiry_date: string
           id?: string
           list_id: string
           name: string
           purchase_date?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           barcode?: string | null
           category?: string | null
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           expiry_date?: string
           id?: string
           list_id?: string
           name?: string
           purchase_date?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
