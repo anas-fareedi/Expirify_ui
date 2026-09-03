@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AlertTriangle, Bell, CheckCircle2, Clock, PackageSearch, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ListSwitcher } from "@/components/ListSwitcher";
+import { ActivityLog, TrashPanel } from "@/components/ItemHistory";
 import { useItems, useLegacyMigration } from "@/hooks/use-items";
 import { useActiveList, useCreateList } from "@/hooks/use-lists";
 import {
@@ -18,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { CountUp, MotionCard, Reveal } from "@/components/motion";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
