@@ -62,8 +62,24 @@ const statusStyles: Record<Status, string> = {
 function Dashboard() {
   const { lists, activeList, select, isLoading: listsLoading } = useActiveList();
   const createList = useCreateList();
-  const { items, ready, removeItem } = useItems(activeList?.id);
+  const { items, deletedItems, ready, removeItem, restoreItem, purgeItem } = useItems(activeList?.id);
   useLegacyMigration(activeList?.id);
+
+  const handleRemove = async (item: Item) => {
+    await removeItem(item.id);
+    toast.success(`${item.name} deleted`, {
+      description: "It stays in Recently deleted until you remove it for good.",
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          restoreItem(item.id).then(() => toast.success(`${item.name} restored`));
+        },
+      },
+    });
+  };
+
+
 
   const [filter, setFilter] = useState<(typeof filters)[number]["key"]>("all");
   const [query, setQuery] = useState("");
