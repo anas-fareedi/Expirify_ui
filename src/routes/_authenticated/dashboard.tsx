@@ -233,11 +233,15 @@ function Dashboard() {
             key={item.id}
             item={item}
             delay={Math.min(i, 8) * 60}
-            onRemove={() => removeItem(item.id)}
+            onRemove={() => handleRemove(item)}
           />
         ))}
       </div>
+
+      <TrashPanel items={deletedItems} onRestore={restoreItem} onPurge={purgeItem} />
+      <ActivityLog listId={activeList?.id} />
     </AppShell>
+
   );
 }
 
