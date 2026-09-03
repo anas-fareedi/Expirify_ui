@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AlertTriangle, Bell, CheckCircle2, Clock, PackageSearch, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ListSwitcher } from "@/components/ListSwitcher";
+import { ActivityLog, TrashPanel } from "@/components/ItemHistory";
 import { useItems, useLegacyMigration } from "@/hooks/use-items";
 import { useActiveList, useCreateList } from "@/hooks/use-lists";
 import {
@@ -18,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { CountUp, MotionCard, Reveal } from "@/components/motion";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -59,8 +62,24 @@ const statusStyles: Record<Status, string> = {
 function Dashboard() {
   const { lists, activeList, select, isLoading: listsLoading } = useActiveList();
   const createList = useCreateList();
-  const { items, ready, removeItem } = useItems(activeList?.id);
+  const { items, deletedItems, ready, removeItem, restoreItem, purgeItem } = useItems(activeList?.id);
   useLegacyMigration(activeList?.id);
+
+  const handleRemove = async (item: Item) => {
+    await removeItem(item.id);
+    toast.success(`${item.name} deleted`, {
+      description: "It stays in Recently deleted until you remove it for good.",
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          restoreItem(item.id).then(() => toast.success(`${item.name} restored`));
+        },
+      },
+    });
+  };
+
+
 
   const [filter, setFilter] = useState<(typeof filters)[number]["key"]>("all");
   const [query, setQuery] = useState("");
@@ -214,11 +233,15 @@ function Dashboard() {
             key={item.id}
             item={item}
             delay={Math.min(i, 8) * 60}
-            onRemove={() => removeItem(item.id)}
+            onRemove={() => handleRemove(item)}
           />
         ))}
       </div>
+
+      <TrashPanel items={deletedItems} onRestore={restoreItem} onPurge={purgeItem} />
+      <ActivityLog listId={activeList?.id} />
     </AppShell>
+
   );
 }
 

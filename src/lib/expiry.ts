@@ -8,7 +8,15 @@ export type Item = {
   purchase_date: string; // yyyy-mm-dd (real date column)
   expiry_date: string; // yyyy-mm-dd (real date column)
   created_at: string;
+  updated_at?: string;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
+
+/** Milliseconds a deleted item stays recoverable in the undo window. */
+export const UNDO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 
 /** Legacy shape used by the pre-database localStorage store (migrated once). */
 export type LegacyProduct = {
