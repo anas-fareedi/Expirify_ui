@@ -10,7 +10,7 @@ export type BarcodeLookupResult = {
   source: string;
 };
 
-const API_URL = (import.meta.env.VITE_EXPIRIFY_API_URL || "https://expirify.onrender.com").replace(
+const API_URL = (import.meta.env["VITE_EXPIRIFY_API_URL"] || "https://expirify.onrender.com").replace(
   /\/$/,
   "",
 );
