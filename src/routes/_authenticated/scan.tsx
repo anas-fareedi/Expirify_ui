@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { CalendarClock, Save, ScanLine } from "lucide-react";
+import { CalendarClock, LoaderCircle, Save, ScanLine, Search } from "lucide-react";
 import { timelineLabel } from "@/lib/expiry";
+import { lookupBarcode } from "@/lib/expirify-api";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useItems } from "@/hooks/use-items";
@@ -43,6 +44,7 @@ function ScanPage() {
   const { lists, activeList, select } = useActiveList();
   const { addItem } = useItems(activeList?.id);
   const [saving, setSaving] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
   const [form, setForm] = useState({
     name: "",
     barcode: "",
@@ -51,10 +53,43 @@ function ScanPage() {
     expiryDate: "",
   });
 
-  const onDetected = useCallback((value: string) => {
-    setForm((f) => ({ ...f, barcode: value, name: f.name || `Product ${value.slice(-4)}` }));
-    toast.success("Code captured: " + value);
+  const lookupProduct = useCallback(async (barcode: string) => {
+    const normalizedBarcode = barcode.trim();
+    if (!normalizedBarcode) {
+      toast.error("Enter a barcode first");
+      return;
+    }
+
+    setLookingUp(true);
+    try {
+      const result = await lookupBarcode(normalizedBarcode);
+      setForm((current) => ({
+        ...current,
+        barcode: normalizedBarcode,
+        name: result.name || current.name || `Product ${normalizedBarcode.slice(-4)}`,
+        category: result.category || current.category,
+        expiryDate: current.expiryDate || result.estimated_expiry_date || "",
+      }));
+      toast.success(
+        result.found
+          ? `${result.name || "Product"} details filled in`
+          : "Barcode saved — add the product details below",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not look up this barcode");
+    } finally {
+      setLookingUp(false);
+    }
   }, []);
+
+  const onDetected = useCallback(
+    (value: string) => {
+      setForm((f) => ({ ...f, barcode: value, name: f.name || `Product ${value.slice(-4)}` }));
+      toast.success("Code captured: " + value);
+      void lookupProduct(value);
+    },
+    [lookupProduct],
+  );
 
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -131,13 +166,31 @@ function ScanPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="barcode">Barcode / QR value</Label>
-            <Input
-              id="barcode"
-              value={form.barcode}
-              onChange={set("barcode")}
-              placeholder="8901234567890"
-            />
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="barcode">Barcode / QR value</Label>
+              <span className="text-xs text-muted-foreground">Powered by Expirify API</span>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                id="barcode"
+                value={form.barcode}
+                onChange={set("barcode")}
+                placeholder="8901234567890"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void lookupProduct(form.barcode)}
+                disabled={lookingUp || !form.barcode.trim()}
+                aria-label="Look up barcode"
+              >
+                {lookingUp ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
