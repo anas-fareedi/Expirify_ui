@@ -23,7 +23,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function errorDetail(payload: unknown, status: number): string {
-  if (isRecord(payload) && typeof payload.detail === "string") return payload.detail;
+  if (isRecord(payload) && typeof payload["detail"] === "string") return payload["detail"];
   return `Barcode lookup failed (${status})`;
 }
 
@@ -36,25 +36,30 @@ function isDateString(value: unknown): value is string {
 }
 
 function parseBarcodeResult(payload: unknown): BarcodeLookupResult {
-  if (!isRecord(payload) || typeof payload.found !== "boolean" || typeof payload.barcode !== "string") {
+  if (
+    !isRecord(payload) ||
+    typeof payload["found"] !== "boolean" ||
+    typeof payload["barcode"] !== "string"
+  ) {
     throw new Error("The scan service returned an unexpected response. Enter the details manually.");
   }
 
   return {
-    found: payload.found,
-    barcode: payload.barcode,
-    name: typeof payload.name === "string" ? payload.name.trim() || null : null,
-    brand: typeof payload.brand === "string" ? payload.brand.trim() || null : null,
-    category: typeof payload.category === "string" ? payload.category.trim() || null : null,
+    found: payload["found"],
+    barcode: payload["barcode"],
+    name: typeof payload["name"] === "string" ? payload["name"].trim() || null : null,
+    brand: typeof payload["brand"] === "string" ? payload["brand"].trim() || null : null,
+    category: typeof payload["category"] === "string" ? payload["category"].trim() || null : null,
     default_shelf_life_days:
-      typeof payload.default_shelf_life_days === "number" && Number.isFinite(payload.default_shelf_life_days)
-        ? payload.default_shelf_life_days
+      typeof payload["default_shelf_life_days"] === "number" &&
+      Number.isFinite(payload["default_shelf_life_days"])
+        ? payload["default_shelf_life_days"]
         : 0,
-    estimated_expiry_date: isDateString(payload.estimated_expiry_date)
-      ? payload.estimated_expiry_date
+    estimated_expiry_date: isDateString(payload["estimated_expiry_date"])
+      ? payload["estimated_expiry_date"]
       : null,
-    image_url: typeof payload.image_url === "string" ? payload.image_url : null,
-    source: typeof payload.source === "string" ? payload.source : "Expirify scan service",
+    image_url: typeof payload["image_url"] === "string" ? payload["image_url"] : null,
+    source: typeof payload["source"] === "string" ? payload["source"] : "Expirify scan service",
   };
 }
 
