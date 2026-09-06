@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CalendarClock, LoaderCircle, Save, ScanLine, Search } from "lucide-react";
 import { timelineLabel } from "@/lib/expiry";
@@ -37,7 +37,11 @@ export const Route = createFileRoute("/_authenticated/scan")({
   component: ScanPage,
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
+};
 
 function ScanPage() {
   const navigate = useNavigate();
@@ -45,6 +49,7 @@ function ScanPage() {
   const { addItem } = useItems(activeList?.id);
   const [saving, setSaving] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
+  const lookupController = useRef<AbortController | null>(null);
   const [form, setForm] = useState({
     name: "",
     barcode: "",
@@ -53,6 +58,8 @@ function ScanPage() {
     expiryDate: "",
   });
 
+  useEffect(() => () => lookupController.current?.abort(), []);
+
   const lookupProduct = useCallback(async (barcode: string) => {
     const normalizedBarcode = barcode.trim();
     if (!normalizedBarcode) {
@@ -60,9 +67,12 @@ function ScanPage() {
       return;
     }
 
+    lookupController.current?.abort();
+    const controller = new AbortController();
+    lookupController.current = controller;
     setLookingUp(true);
     try {
-      const result = await lookupBarcode(normalizedBarcode);
+      const result = await lookupBarcode(normalizedBarcode, { signal: controller.signal });
       setForm((current) => ({
         ...current,
         barcode: normalizedBarcode,
@@ -76,16 +86,21 @@ function ScanPage() {
           : "Barcode saved — add the product details below",
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not look up this barcode");
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        toast.error(err instanceof Error ? err.message : "Could not look up this barcode");
+      }
     } finally {
-      setLookingUp(false);
+      if (lookupController.current === controller) {
+        lookupController.current = null;
+        setLookingUp(false);
+      }
     }
   }, []);
 
   const onDetected = useCallback(
     (value: string) => {
       setForm((f) => ({ ...f, barcode: value, name: f.name || `Product ${value.slice(-4)}` }));
-      toast.success("Code captured: " + value);
+      toast.success("Code captured — looking up details");
       void lookupProduct(value);
     },
     [lookupProduct],
@@ -96,8 +111,15 @@ function ScanPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.expiryDate) {
+    const name = form.name.trim();
+    const barcode = form.barcode.trim();
+    const category = form.category.trim();
+    if (!name || !form.expiryDate) {
       toast.error("Product name and expiry date are required");
+      return;
+    }
+    if (form.expiryDate < form.purchaseDate) {
+      toast.error("Expiry date cannot be before the purchase date");
       return;
     }
     if (!activeList) {
@@ -107,8 +129,8 @@ function ScanPage() {
     }
     setSaving(true);
     try {
-      await addItem(form);
-      toast.success(`${form.name} added to ${activeList.name}`);
+      await addItem({ ...form, name, barcode, category });
+      toast.success(`${name} added to ${activeList.name}`);
       navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save the item");
