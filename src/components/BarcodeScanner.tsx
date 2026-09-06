@@ -6,6 +6,11 @@ type Props = {
   onDetected: (value: string) => void;
 };
 
+type DetectedCode = { rawValue?: unknown };
+type BarcodeDetectorLike = {
+  detect: (source: HTMLVideoElement) => Promise<DetectedCode[]>;
+};
+
 export function BarcodeScanner({ onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [active, setActive] = useState(false);
@@ -13,7 +18,11 @@ export function BarcodeScanner({ onDetected }: Props) {
   const [supported, setSupported] = useState(true);
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "BarcodeDetector" in window);
+    setSupported(
+      typeof window !== "undefined" &&
+        "BarcodeDetector" in window &&
+        !!navigator.mediaDevices?.getUserMedia,
+    );
   }, []);
 
   useEffect(() => {
@@ -23,24 +32,37 @@ export function BarcodeScanner({ onDetected }: Props) {
     let cancelled = false;
 
     const run = async () => {
+      setError(null);
+      if (!supported) {
+        setError("Live code reading is not supported on this browser. Enter the code manually below.");
+        setActive(false);
+        return;
+      }
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
         });
-        if (cancelled) return;
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        const Detector = (window as unknown as { BarcodeDetector?: any }).BarcodeDetector;
-        if (!Detector) return;
+        const Detector = (window as unknown as {
+          BarcodeDetector?: new () => BarcodeDetectorLike;
+        }).BarcodeDetector;
+        if (!Detector) throw new Error("Barcode reading is unavailable in this browser");
         const detector = new Detector();
         const tick = async () => {
           if (cancelled || !videoRef.current) return;
           try {
             const codes = await detector.detect(videoRef.current);
-            if (codes?.length) {
-              onDetected(String(codes[0].rawValue));
+            const value = codes?.[0]?.rawValue;
+            if (typeof value === "string" && value.trim()) {
+              onDetected(value.trim());
               setActive(false);
               return;
             }
@@ -50,8 +72,18 @@ export function BarcodeScanner({ onDetected }: Props) {
           raf = requestAnimationFrame(() => void tick());
         };
         void tick();
-      } catch {
-        setError("Camera access was blocked. Enter the label details manually below.");
+      } catch (error) {
+        if (cancelled) return;
+        const name = error instanceof DOMException ? error.name : "";
+        const message =
+          name === "NotAllowedError"
+            ? "Camera access was blocked. Allow camera access or enter the code manually below."
+            : name === "NotFoundError"
+              ? "No camera was found. Enter the code manually below."
+              : name === "NotReadableError"
+                ? "The camera is being used by another app. Close it or enter the code manually."
+                : "The camera could not start. Enter the code manually below.";
+        setError(message);
         setActive(false);
       }
     };
@@ -61,8 +93,9 @@ export function BarcodeScanner({ onDetected }: Props) {
       cancelled = true;
       cancelAnimationFrame(raf);
       stream?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [active, onDetected]);
+  }, [active, onDetected, supported]);
 
   return (
     <div className="space-y-3">
@@ -102,13 +135,18 @@ export function BarcodeScanner({ onDetected }: Props) {
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant={active ? "secondary" : "default"} onClick={() => setActive((v) => !v)}>
+        <Button
+          type="button"
+          variant={active ? "secondary" : "default"}
+          onClick={() => setActive((v) => !v)}
+          disabled={!supported}
+        >
           {active ? <CameraOff className="mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
           {active ? "Stop scanning" : "Start scanning"}
         </Button>
         {!supported && (
           <span className="text-xs text-muted-foreground">
-            Live code reading isn&apos;t supported on this browser — use manual entry.
+            Live code reading isn&apos;t supported on this browser — use manual entry below.
           </span>
         )}
       </div>
