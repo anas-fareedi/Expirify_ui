@@ -15,14 +15,11 @@ export function BarcodeScanner({ onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [supported, setSupported] = useState(true);
+  const [hasCamera, setHasCamera] = useState(true);
+  const handled = useRef(false);
 
   useEffect(() => {
-    setSupported(
-      typeof window !== "undefined" &&
-        "BarcodeDetector" in window &&
-        !!navigator.mediaDevices?.getUserMedia,
-    );
+    setHasCamera(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
   }, []);
 
   useEffect(() => {
@@ -30,55 +27,75 @@ export function BarcodeScanner({ onDetected }: Props) {
     let stream: MediaStream | null = null;
     let raf = 0;
     let cancelled = false;
+    let zxingReader: { reset?: () => void } | null = null;
+    handled.current = false;
+
+    const finish = (value: string) => {
+      if (handled.current || cancelled) return;
+      handled.current = true;
+      onDetected(value.trim());
+      setActive(false);
+    };
 
     const run = async () => {
       setError(null);
-      if (!supported) {
-        setError("Live code reading is not supported on this browser. Enter the code manually below.");
-        setActive(false);
-        return;
-      }
-
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
+          audio: false,
         });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          video.setAttribute("playsinline", "true");
+          await video.play().catch(() => undefined);
         }
+
         const Detector = (window as unknown as {
-          BarcodeDetector?: new () => BarcodeDetectorLike;
+          BarcodeDetector?: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
         }).BarcodeDetector;
-        if (!Detector) throw new Error("Barcode reading is unavailable in this browser");
-        const detector = new Detector();
-        const tick = async () => {
-          if (cancelled || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            const value = codes?.[0]?.rawValue;
-            if (typeof value === "string" && value.trim()) {
-              onDetected(value.trim());
-              setActive(false);
-              return;
+
+        if (Detector) {
+          const detector = new Detector();
+          const tick = async () => {
+            if (cancelled || handled.current || !videoRef.current) return;
+            try {
+              const codes = await detector.detect(videoRef.current);
+              const value = codes?.[0]?.rawValue;
+              if (typeof value === "string" && value.trim()) {
+                finish(value);
+                return;
+              }
+            } catch {
+              /* keep scanning */
             }
-          } catch {
-            /* keep scanning */
-          }
-          raf = requestAnimationFrame(() => void tick());
-        };
-        void tick();
-      } catch (error) {
+            raf = requestAnimationFrame(() => void tick());
+          };
+          void tick();
+          return;
+        }
+
+        // Fallback: pure-JS reader for browsers without native barcode support
+        const { BrowserMultiFormatReader } = await import("@zxing/browser");
         if (cancelled) return;
-        const name = error instanceof DOMException ? error.name : "";
+        const reader = new BrowserMultiFormatReader(undefined, { delayBetweenScanAttempts: 200 });
+        zxingReader = reader as unknown as { reset?: () => void };
+        if (!videoRef.current) return;
+        await reader.decodeFromStream(stream, videoRef.current, (result) => {
+          const text = result?.getText?.();
+          if (text) finish(text);
+        });
+      } catch (err) {
+        if (cancelled) return;
+        const name = err instanceof DOMException ? err.name : "";
         const message =
-          name === "NotAllowedError"
-            ? "Camera access was blocked. Allow camera access or enter the code manually below."
-            : name === "NotFoundError"
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "Camera access was blocked. Allow camera access in your browser, then try again — or enter the code manually below."
+            : name === "NotFoundError" || name === "OverconstrainedError"
               ? "No camera was found. Enter the code manually below."
               : name === "NotReadableError"
                 ? "The camera is being used by another app. Close it or enter the code manually."
@@ -92,15 +109,20 @@ export function BarcodeScanner({ onDetected }: Props) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      try {
+        zxingReader?.reset?.();
+      } catch {
+        /* ignore */
+      }
       stream?.getTracks().forEach((t) => t.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [active, onDetected, supported]);
+  }, [active, onDetected]);
 
   return (
     <div className="space-y-3">
       <div className="scan-frame relative aspect-[4/3] overflow-hidden bg-secondary/60">
-        <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+        <video ref={videoRef} muted playsInline autoPlay className="h-full w-full object-cover" />
 
         {!active && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
@@ -139,14 +161,13 @@ export function BarcodeScanner({ onDetected }: Props) {
           type="button"
           variant={active ? "secondary" : "default"}
           onClick={() => setActive((v) => !v)}
-          disabled={!supported}
         >
           {active ? <CameraOff className="mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
           {active ? "Stop scanning" : "Start scanning"}
         </Button>
-        {!supported && (
+        {!hasCamera && (
           <span className="text-xs text-muted-foreground">
-            Live code reading isn&apos;t supported on this browser — use manual entry below.
+            This browser has no camera access — use manual entry below.
           </span>
         )}
       </div>
