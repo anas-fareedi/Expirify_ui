@@ -139,7 +139,8 @@ function Landing() {
           </div>
 
           <div
-            className="scan-frame animate-rise animate-float relative aspect-[4/3] overflow-hidden lg:aspect-auto"
+            className="scan-frame animate-rise animate-float relative aspect-[4/3] min-w-0 overflow-hidden lg:aspect-auto"
+
 
             style={{ animationDelay: "200ms" }}
           >
