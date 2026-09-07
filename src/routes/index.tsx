@@ -90,7 +90,7 @@ function Landing() {
 
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-2 lg:py-20">
-          <div>
+          <div className="min-w-0">
             <span className="animate-rise inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
               <Smartphone className="h-3.5 w-3.5" /> Phone · Laptop · Tablet
             </span>
