@@ -89,39 +89,42 @@ function Landing() {
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-2 lg:py-20">
+        <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-2 lg:py-20">
           <div>
             <span className="animate-rise inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary">
               <Smartphone className="h-3.5 w-3.5" /> Phone · Laptop · Tablet
             </span>
             <h1
-              className="animate-rise mt-5 text-4xl font-semibold leading-[1.05] sm:text-5xl lg:text-6xl"
+              className="animate-rise mt-4 text-[1.9rem] font-semibold leading-[1.1] sm:text-5xl lg:text-6xl"
               style={{ animationDelay: "120ms" }}
             >
               Scan it. <span className="shimmer-text">Track it.</span> Never waste it.
             </h1>
+
             <p
-              className="animate-rise mt-5 max-w-xl text-base text-muted-foreground"
+              className="animate-rise mt-4 max-w-xl text-sm text-muted-foreground sm:text-base"
               style={{ animationDelay: "220ms" }}
             >
               Expirify captures product name, purchase date and expiry date straight from the label —
               then warns you at 7 days, 3 days and 1 day left, so nothing expires on your shelf.
             </p>
             <div
-              className="animate-rise mt-8 flex flex-wrap gap-3"
+              className="animate-rise mt-6 grid gap-3 sm:flex sm:flex-wrap sm:mt-8"
               style={{ animationDelay: "320ms" }}
             >
-              <Button asChild size="lg" className="hover-scale">
+              <Button asChild size="lg" className="hover-scale w-full sm:w-auto">
                 <Link to="/auth">Create free account</Link>
               </Button>
-              <Button asChild size="lg" variant="secondary" className="hover-scale">
+              <Button asChild size="lg" variant="secondary" className="hover-scale w-full sm:w-auto">
                 <Link to="/auth">Sign in with mobile</Link>
               </Button>
             </div>
 
+
             {/* live alert ticker */}
             <div
-              className="animate-rise surface-card mt-10 overflow-hidden py-3"
+              className="animate-rise surface-card mt-6 overflow-hidden py-3 sm:mt-10"
+
               style={{ animationDelay: "420ms" }}
             >
               <div className="animate-ticker flex w-max gap-8 whitespace-nowrap px-4 text-xs text-muted-foreground">
@@ -136,7 +139,8 @@ function Landing() {
           </div>
 
           <div
-            className="scan-frame animate-rise animate-float relative overflow-hidden"
+            className="scan-frame animate-rise animate-float relative aspect-[4/3] overflow-hidden lg:aspect-auto"
+
             style={{ animationDelay: "200ms" }}
           >
             <img
