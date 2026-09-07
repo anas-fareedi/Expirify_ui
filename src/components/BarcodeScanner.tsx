@@ -11,9 +11,57 @@ type BarcodeDetectorLike = {
   detect: (source: HTMLVideoElement) => Promise<DetectedCode[]>;
 };
 
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorLike;
+
+const DETECTION_FORMATS = [
+  "aztec",
+  "code_128",
+  "code_39",
+  "code_93",
+  "codabar",
+  "data_matrix",
+  "ean_13",
+  "ean_8",
+  "itf",
+  "pdf417",
+  "qr_code",
+  "upc_a",
+  "upc_e",
+];
+
+function waitForVideo(video: HTMLVideoElement, cancelled: () => boolean) {
+  return new Promise<void>((resolve, reject) => {
+    if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+      resolve();
+      return;
+    }
+
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("The camera preview could not load"));
+    };
+    const cleanup = () => {
+      video.removeEventListener("loadeddata", onReady);
+      video.removeEventListener("error", onError);
+    };
+
+    video.addEventListener("loadeddata", onReady, { once: true });
+    video.addEventListener("error", onError, { once: true });
+    if (cancelled()) {
+      cleanup();
+      reject(new DOMException("Camera startup was cancelled", "AbortError"));
+    }
+  });
+}
+
 export function BarcodeScanner({ onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [active, setActive] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasCamera, setHasCamera] = useState(true);
   const handled = useRef(false);
@@ -25,25 +73,62 @@ export function BarcodeScanner({ onDetected }: Props) {
   useEffect(() => {
     if (!active) return;
     let stream: MediaStream | null = null;
-    let raf = 0;
+    let scanTimer: number | null = null;
     let cancelled = false;
     let zxingReader: { reset?: () => void } | null = null;
+    let detectionInFlight = false;
+    let lastCandidate = "";
+    let candidateCount = 0;
     handled.current = false;
 
     const finish = (value: string) => {
-      if (handled.current || cancelled) return;
+      const normalized = value.trim();
+      if (handled.current || cancelled || !normalized) return;
       handled.current = true;
-      onDetected(value.trim());
+      onDetected(normalized);
       setActive(false);
+    };
+
+    const registerCandidate = (value: string) => {
+      const normalized = value.trim();
+      if (!normalized) return;
+      if (normalized === lastCandidate) {
+        candidateCount += 1;
+      } else {
+        lastCandidate = normalized;
+        candidateCount = 1;
+      }
+
+      // Require two matching frames to avoid saving a partial/false read.
+      if (candidateCount >= 2) finish(normalized);
     };
 
     const run = async () => {
       setError(null);
+      setStarting(true);
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
-          audio: false,
-        });
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new DOMException("Camera access is unavailable", "NotFoundError");
+        }
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 },
+            },
+            audio: false,
+          });
+        } catch (firstError) {
+          // Some mobile browsers reject ideal resolution constraints even when a
+          // camera is available, so retry with the simplest valid request.
+          if (firstError instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(firstError.name)) {
+            throw firstError;
+          }
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
@@ -52,28 +137,37 @@ export function BarcodeScanner({ onDetected }: Props) {
         if (video) {
           video.srcObject = stream;
           video.setAttribute("playsinline", "true");
-          await video.play().catch(() => undefined);
+          video.muted = true;
+          await waitForVideo(video, () => cancelled);
+          await video.play();
         }
+        setStarting(false);
 
         const Detector = (window as unknown as {
-          BarcodeDetector?: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
+          BarcodeDetector?: BarcodeDetectorConstructor;
         }).BarcodeDetector;
 
         if (Detector) {
-          const detector = new Detector();
+          let detector: BarcodeDetectorLike;
+          try {
+            detector = new Detector({ formats: DETECTION_FORMATS });
+          } catch {
+            detector = new Detector();
+          }
+
           const tick = async () => {
-            if (cancelled || handled.current || !videoRef.current) return;
+            if (cancelled || handled.current || !videoRef.current || detectionInFlight) return;
+            detectionInFlight = true;
             try {
               const codes = await detector.detect(videoRef.current);
               const value = codes?.[0]?.rawValue;
-              if (typeof value === "string" && value.trim()) {
-                finish(value);
-                return;
-              }
+              if (typeof value === "string") registerCandidate(value);
             } catch {
               /* keep scanning */
+            } finally {
+              detectionInFlight = false;
             }
-            raf = requestAnimationFrame(() => void tick());
+            if (!cancelled && !handled.current) scanTimer = window.setTimeout(() => void tick(), 120);
           };
           void tick();
           return;
@@ -87,7 +181,7 @@ export function BarcodeScanner({ onDetected }: Props) {
         if (!videoRef.current) return;
         await reader.decodeFromStream(stream, videoRef.current, (result) => {
           const text = result?.getText?.();
-          if (text) finish(text);
+          if (text) registerCandidate(text);
         });
       } catch (err) {
         if (cancelled) return;
@@ -102,13 +196,15 @@ export function BarcodeScanner({ onDetected }: Props) {
                 : "The camera could not start. Enter the code manually below.";
         setError(message);
         setActive(false);
+      } finally {
+        if (!cancelled) setStarting(false);
       }
     };
 
     void run();
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
+      if (scanTimer !== null) window.clearTimeout(scanTimer);
       try {
         zxingReader?.reset?.();
       } catch {
@@ -116,6 +212,7 @@ export function BarcodeScanner({ onDetected }: Props) {
       }
       stream?.getTracks().forEach((t) => t.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
+      setStarting(false);
     };
   }, [active, onDetected]);
 
@@ -133,6 +230,15 @@ export function BarcodeScanner({ onDetected }: Props) {
             <p className="relative max-w-xs text-sm text-muted-foreground">
               Point the camera at a barcode, QR code or printed expiry label.
             </p>
+          </div>
+        )}
+
+        {active && starting && (
+          <div className="absolute inset-0 grid place-items-center bg-background/50 backdrop-blur-[2px]">
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card/90 px-4 py-2 text-sm text-foreground">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+              Starting camera…
+            </div>
           </div>
         )}
 
@@ -161,9 +267,10 @@ export function BarcodeScanner({ onDetected }: Props) {
           type="button"
           variant={active ? "secondary" : "default"}
           onClick={() => setActive((v) => !v)}
+          disabled={starting}
         >
           {active ? <CameraOff className="mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
-          {active ? "Stop scanning" : "Start scanning"}
+          {starting ? "Opening camera…" : active ? "Stop scanning" : "Start scanning"}
         </Button>
         {!hasCamera && (
           <span className="text-xs text-muted-foreground">
